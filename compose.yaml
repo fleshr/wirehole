@@ -1,0 +1,69 @@
+services:
+  unbound:
+    image: mvance/unbound
+    container_name: unbound
+    hostname: unbound
+    volumes:
+      - type: bind
+        read_only: true
+        source: ./unbound/unbound.conf
+        target: /opt/unbound/etc/unbound/unbound.conf
+    restart: unless-stopped
+    networks:
+      default:
+        ipv4_address: 10.10.10.20
+
+  pihole:
+    depends_on:
+      - unbound
+    image: pihole/pihole
+    container_name: pihole
+    hostname: pihole
+    environment:
+      TZ: Etc/UTC
+      WEBPASSWORD: ""
+      FTLCONF_LOCAL_IPV4: 10.10.10.10
+      PIHOLE_DNS_: 10.10.10.20
+    volumes:
+      - ./etc-pihole:/etc/pihole
+      - ./etc-dnsmasq.d:/etc/dnsmasq.d
+    cap_add:
+      - NET_ADMIN
+    restart: unless-stopped
+    networks:
+      default:
+        ipv4_address: 10.10.10.10
+
+  wireguard:
+    depends_on:
+      - unbound
+      - pihole
+    image: linuxserver/wireguard
+    container_name: wireguard
+    hostname: wireguard
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    environment:
+      PUID: 1000
+      PGID: 1000
+      TZ: Etc/UTC
+      PEERS: 2
+      PEERDNS: 10.10.10.10
+    volumes:
+      - ./wireguard:/config
+      - /lib/modules:/lib/modules
+    ports:
+      - 51820:51820/udp
+    sysctls:
+      - net.ipv4.conf.all.src_valid_mark=1
+    restart: unless-stopped
+    networks:
+      default:
+        ipv4_address: 10.10.10.30
+
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 10.10.10.0/24
