@@ -1,6 +1,6 @@
 services:
   unbound:
-    image: mvance/unbound
+    image: mvance/unbound:latest
     container_name: unbound
     hostname: unbound
     volumes:
@@ -8,6 +8,8 @@ services:
         read_only: true
         source: ./unbound/unbound.conf
         target: /opt/unbound/etc/unbound/unbound.conf
+    healthcheck:
+      disable: true
     restart: unless-stopped
     networks:
       default:
@@ -16,7 +18,7 @@ services:
   pihole:
     depends_on:
       - unbound
-    image: pihole/pihole
+    image: pihole/pihole:latest
     container_name: pihole
     hostname: pihole
     environment:
@@ -27,8 +29,8 @@ services:
     volumes:
       - ./etc-pihole:/etc/pihole
       - ./etc-dnsmasq.d:/etc/dnsmasq.d
-    cap_add:
-      - NET_ADMIN
+    healthcheck:
+      disable: true
     restart: unless-stopped
     networks:
       default:
@@ -38,12 +40,11 @@ services:
     depends_on:
       - unbound
       - pihole
-    image: linuxserver/wireguard
+    image: linuxserver/wireguard:latest
     container_name: wireguard
     hostname: wireguard
     cap_add:
       - NET_ADMIN
-      - SYS_MODULE
     environment:
       PUID: 1000
       PGID: 1000
@@ -52,7 +53,6 @@ services:
       PEERDNS: 10.10.10.10
     volumes:
       - ./wireguard:/config
-      - /lib/modules:/lib/modules
     ports:
       - 51820:51820/udp
     sysctls:
